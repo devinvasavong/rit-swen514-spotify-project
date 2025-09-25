@@ -1,0 +1,46 @@
+<!-- index.html (static) -->
+<input id="playlist" placeholder="paste spotify playlist url or id" />
+<button id="go">Analyze</button>
+<pre id="out"></pre>
+
+<script>
+  function extractPlaylistId(input) {
+    try {
+      const url = new URL(input);
+      if (url.hostname.includes("spotify.com")) {
+        const parts = url.pathname.split("/").filter(Boolean);
+        return parts.length >= 2 ? parts[1] : null;
+      }
+    } catch (e) {
+      // not a url -> maybe raw id
+    }
+    // fallback: if looks like base62 id (22 chars)
+    if (/^[A-Za-z0-9]{22,}$/.test(input)) return input;
+    return null;
+  }
+
+  document.getElementById("go").addEventListener("click", async () => {
+    const raw = document.getElementById("playlist").value.trim();
+    const id = extractPlaylistId(raw);
+    if (!id) {
+      document.getElementById("out").textContent = "Invalid playlist URL/ID";
+      return;
+    }
+    document.getElementById("out").textContent = "Calling backend...";
+    try {
+      const resp = await fetch("http://localhost:5001/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playlist_id: id }),
+      });
+      const data = await resp.json();
+      document.getElementById("out").textContent = JSON.stringify(
+        data,
+        null,
+        2
+      );
+    } catch (err) {
+      document.getElementById("out").textContent = "Error: " + err;
+    }
+  });
+</script>
